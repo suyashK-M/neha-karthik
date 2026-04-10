@@ -17,7 +17,7 @@ export default function Home() {
                 Est. 2026 • Bangalore, India
               </span>
               <h1 className="font-headline text-7xl md:text-9xl text-primary leading-tight tracking-tighter">
-                The Imperial Union
+                Neha & Karthik
               </h1>
             </div>
             <p className="font-headline italic text-2xl text-on-surface-variant max-w-md">

@@ -12,11 +12,44 @@ export default function RSVP() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+    contactNumber: "",
     event: "The Grand Union (Wedding)",
-    guestCount: "1",
     attendance: "attending",
-    dietary: ""
+    dietaryChoice: "no",
+    dietaryDetails: "",
+    allergiesChoice: "no",
+    allergiesDetails: "",
+    accessibilityChoice: "no",
+    accessibilityDetails: "",
+    hasAdditionalGuests: "no",
+    additionalGuests: [] as { id: string; firstName: string; lastName: string }[]
   });
+
+  const addGuest = () => {
+    setFormData(prev => ({
+      ...prev,
+      additionalGuests: [
+        ...prev.additionalGuests,
+        { id: Math.random().toString(36).substr(2, 9), firstName: "", lastName: "" }
+      ]
+    }));
+  };
+
+  const removeGuest = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalGuests: prev.additionalGuests.filter(g => g.id !== id)
+    }));
+  };
+
+  const updateGuest = (id: string, field: "firstName" | "lastName", value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalGuests: prev.additionalGuests.map(g => 
+        g.id === id ? { ...g, [field]: value } : g
+      )
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,15 +57,27 @@ export default function RSVP() {
 
     try {
       // Prepare payload
+      const restrictions = [
+        formData.dietaryChoice === "yes" ? `Dietary: ${formData.dietaryDetails}` : "",
+        formData.allergiesChoice === "yes" ? `Allergies: ${formData.allergiesDetails}` : "",
+        formData.accessibilityChoice === "yes" ? `Accessibility: ${formData.accessibilityDetails}` : ""
+      ].filter(Boolean).join(" | ");
+
+      const guestNames = formData.additionalGuests
+        .map(g => `${g.firstName} ${g.lastName}`.trim())
+        .filter(Boolean)
+        .join(", ");
+
       const payload = {
         date: new Date().toLocaleDateString(),
         event: formData.event,
         fullName: formData.fullName,
         email: formData.email,
-        // Only send guestCount if attending, otherwise 0
-        guestCount: formData.attendance === "attending" ? formData.guestCount : "0",
+        contactNumber: formData.contactNumber,
+        guestCount: formData.attendance === "attending" ? (1 + formData.additionalGuests.length).toString() : "0",
         attendance: formData.attendance,
-        dietary: formData.dietary
+        dietary: restrictions,
+        additionalGuests: guestNames
       };
 
       // Submit
@@ -57,7 +102,7 @@ export default function RSVP() {
     <main className="min-h-screen bg-surface">
       <Navbar />
 
-      <div className="pt-32 pb-24 px-6 floral-bg transition-all duration-1000">
+      <div className="pt-32 pb-24 px-6 transition-all duration-1000">
         <div className="max-w-3xl mx-auto">
           {/* Header Section */}
           <section className="text-center mb-20">
@@ -147,6 +192,22 @@ export default function RSVP() {
                       type="email"
                     />
                   </div>
+
+                  {/* Contact Number Input */}
+                  <div className="group">
+                    <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 block">
+                      Contact Number
+                    </label>
+                    <input
+                      name="contactNumber"
+                      value={formData.contactNumber}
+                      onChange={handleChange}
+                      required
+                      className="input-underline w-full font-headline text-2xl placeholder:text-surface-dim py-4 text-primary"
+                      placeholder="e.g. +1 555-0123 or +91 98765 43210"
+                      type="tel"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -207,37 +268,173 @@ export default function RSVP() {
                 {/* Conditional Fields: Only show if attending */}
                 {formData.attendance === "attending" && (
                   <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
-                    {/* Guest Count */}
-                    <div className="group">
-                      <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 block">
-                        Number of Guests
-                      </label>
-                      <input
-                        name="guestCount"
-                        value={formData.guestCount}
-                        onChange={handleChange}
-                        className="input-underline w-full font-headline text-2xl placeholder:text-surface-dim py-4 text-primary"
-                        placeholder="01"
-                        type="number"
-                        min="1"
-                        max="10"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-outline-variant/20 pt-12">
+                      {/* Dietary Choice */}
+                      <div className="group">
+                        <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 block">
+                          Do you have dietary restrictions and/or food allergies?
+                        </label>
+                        <select
+                          name="dietaryChoice"
+                          value={formData.dietaryChoice}
+                          onChange={handleChange}
+                          className="input-underline w-full font-headline text-2xl py-4 text-primary bg-transparent appearance-none"
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                        {formData.dietaryChoice === "yes" && (
+                          <textarea
+                            name="dietaryDetails"
+                            value={formData.dietaryDetails}
+                            onChange={handleChange}
+                            className="input-underline w-full font-body text-base mt-4 placeholder:text-surface-dim py-4 text-on-surface resize-none"
+                            placeholder="Please specify your dietary requirements..."
+                            rows={2}
+                          />
+                        )}
+                      </div>
+
+                      {/* Other Allergies */}
+                      <div className="group">
+                        <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 block">
+                          Do you have other allergies (non-food related)?
+                        </label>
+                        <select
+                          name="allergiesChoice"
+                          value={formData.allergiesChoice}
+                          onChange={handleChange}
+                          className="input-underline w-full font-headline text-2xl py-4 text-primary bg-transparent appearance-none"
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                        {formData.allergiesChoice === "yes" && (
+                          <textarea
+                            name="allergiesDetails"
+                            value={formData.allergiesDetails}
+                            onChange={handleChange}
+                            className="input-underline w-full font-body text-base mt-4 placeholder:text-surface-dim py-4 text-on-surface resize-none"
+                            placeholder="Please specify any other allergies..."
+                            rows={2}
+                          />
+                        )}
+                      </div>
                     </div>
 
-                    {/* Dietary Requirements */}
-                    <div className="group">
-                      <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 block">
-                        Special Notes or Dietary Preferences
-                      </label>
-                      <textarea
-                        name="dietary"
-                        value={formData.dietary}
-                        onChange={handleChange}
-                        className="input-underline w-full font-body text-base placeholder:text-surface-dim py-4 text-on-surface resize-none"
-                        placeholder="Allergies, preferences, or a message for the couple..."
-                        rows={2}
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      {/* Accessibility Choice */}
+                      <div className="group">
+                        <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 block">
+                          Do you have any accessibility needs?
+                        </label>
+                        <select
+                          name="accessibilityChoice"
+                          value={formData.accessibilityChoice}
+                          onChange={handleChange}
+                          className="input-underline w-full font-headline text-2xl py-4 text-primary bg-transparent appearance-none"
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                        {formData.accessibilityChoice === "yes" && (
+                          <textarea
+                            name="accessibilityDetails"
+                            value={formData.accessibilityDetails}
+                            onChange={handleChange}
+                            className="input-underline w-full font-body text-base mt-4 placeholder:text-surface-dim py-4 text-on-surface resize-none"
+                            placeholder="Please specify your accessibility needs..."
+                            rows={2}
+                          />
+                        )}
+                      </div>
+
+                      {/* Additional Guests Radio */}
+                      <div className="group bg-primary/5 p-8 rounded-sm">
+                        <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-6 block">
+                          Are there additional guests in your party?
+                        </label>
+                        <div className="flex gap-8">
+                          <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="hasAdditionalGuests"
+                              value="yes"
+                              checked={formData.hasAdditionalGuests === "yes"}
+                              onChange={handleChange}
+                              className="w-4 h-4 text-primary border-outline focus:ring-primary appearance-none border rounded-full checked:bg-primary transition-all"
+                            />
+                            <span className="font-body text-sm">Yes</span>
+                          </label>
+                          <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="hasAdditionalGuests"
+                              value="no"
+                              checked={formData.hasAdditionalGuests === "no"}
+                              onChange={handleChange}
+                              className="w-4 h-4 text-primary border-outline focus:ring-primary appearance-none border rounded-full checked:bg-primary transition-all"
+                            />
+                            <span className="font-body text-sm">No</span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Additional Guests Dynamic List */}
+                    {formData.hasAdditionalGuests === "yes" && (
+                      <div className="space-y-12 border-t border-outline-variant/20 pt-12 animate-in fade-in slide-in-from-top-4">
+                        <h3 className="font-headline text-3xl text-primary italic">Additional Guests</h3>
+                        
+                        <div className="space-y-8">
+                          {formData.additionalGuests.map((guest, index) => (
+                            <div key={guest.id} className="flex flex-col md:flex-row gap-6 items-end group/item">
+                              <div className="flex-1 space-y-2">
+                                <label className="font-label text-[10px] uppercase tracking-widest text-secondary">
+                                  Guest {index + 1} First Name
+                                </label>
+                                <input
+                                  value={guest.firstName}
+                                  onChange={(e) => updateGuest(guest.id, "firstName", e.target.value)}
+                                  className="input-underline w-full font-headline text-xl py-2 text-primary"
+                                  placeholder="First Name"
+                                  required
+                                />
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                <label className="font-label text-[10px] uppercase tracking-widest text-secondary">
+                                  Guest {index + 1} Last Name
+                                </label>
+                                <input
+                                  value={guest.lastName}
+                                  onChange={(e) => updateGuest(guest.id, "lastName", e.target.value)}
+                                  className="input-underline w-full font-headline text-xl py-2 text-primary"
+                                  placeholder="Last Name"
+                                  required
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeGuest(guest.id)}
+                                className="p-2 text-secondary hover:text-primary transition-colors mb-2"
+                                title="Remove Guest"
+                              >
+                                <span className="material-symbols-outlined">delete_outline</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={addGuest}
+                          className="flex items-center gap-2 font-label text-[10px] uppercase tracking-widest text-primary border border-primary/20 px-6 py-3 rounded-sm hover:bg-primary/5 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-sm">person_add</span>
+                          Add Another Guest
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

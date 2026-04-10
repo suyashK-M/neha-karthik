@@ -8,12 +8,6 @@ const Footer = () => {
       </div>
       <div className="flex gap-8">
         <Link
-          href="/stay"
-          className="font-label text-xs tracking-widest uppercase text-primary-fixed/60 hover:text-white transition-opacity"
-        >
-          Travel Info
-        </Link>
-        <Link
           href="/registry"
           className="font-label text-xs tracking-widest uppercase text-primary-fixed/60 hover:text-white transition-opacity"
         >

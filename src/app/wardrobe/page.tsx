@@ -126,7 +126,7 @@ export default function Wardrobe() {
                 <span className="font-label text-[10px] tracking-[0.4em] uppercase text-secondary">
                   01. Thursday Morning
                 </span>
-                <h3 className="font-headline text-4xl mt-2">Devara</h3>
+                <h3 className="font-headline text-4xl mt-2">Devara Samradhane</h3>
               </div>
               <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant">
                 Simple Cottons & Pastels

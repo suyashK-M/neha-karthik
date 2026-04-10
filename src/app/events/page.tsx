@@ -7,6 +7,7 @@ export default function Events() {
   const events = [
     {
       date: "July 6th",
+      time: "9:00 AM onwards",
       title: "Devara Samradhane",
       description: "Commencing our journey with divine blessings. A morning of spiritual resonance and traditional rituals followed by a sacred brunch.",
       location: "Ekadanta Pravachana Mandira, B.E.L. Sri Ganapathi Seva Mandali, B.E.L. Colony, Jalahalli, Bengaluru 560 013",
@@ -17,7 +18,7 @@ export default function Events() {
       date: "July 10th",
       title: "Welcome Lunch",
       description: "A vibrant introduction to our celebrations. Join us for a curated afternoon of flavors and hospitality as we welcome our loved ones.",
-      location: "Zinnia",
+      location: "Zinnia, Sheraton Whitefield",
       image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD9s8O8-W18g71fo34cQLe2dNYWrcx-KhsgzDbvM323yBNoV5eT3gU76cOgIkhdpmCLwn9tyxXMLQGXROB7Q3kW1SL2ZmDUnnXA4vddy9qZN7hVEeNa5tVCbMZMHzkx7lQbW3tVKjsrpkiIFNk8tlEczPBb9xCYYnUbR7zBKzvFeDF4n6Rk7VbAGgv4U877f7marzehQTjcsqXPRKNQmk2IMWUJH35TVMllzDkIeo2Y2zpZb4W36yYuIjLajEx8I4IQtAt2IjkbGQ",
       atmosphere: "Warm & Welcoming",
     },
@@ -108,9 +109,16 @@ export default function Events() {
                 }`}
               >
                 <div className="space-y-8">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-primary opacity-60">
-                    {event.date}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-label text-xs md:text-sm uppercase tracking-widest text-secondary font-bold">
+                      {event.date}
+                    </span>
+                    {"time" in event && (
+                      <span className="font-label text-xs uppercase tracking-widest text-on-surface-variant/60">
+                        {event.time as string}
+                      </span>
+                    )}
+                  </div>
                   <h2 className="font-headline text-5xl md:text-7xl text-primary leading-none tracking-tighter">
                     {event.title}
                   </h2>
@@ -163,12 +171,6 @@ export default function Events() {
                 our travel desk will be active throughout the weekend.
               </p>
               <div className="flex gap-8">
-                <Link
-                  href="/stay"
-                  className="bg-primary text-on-primary px-10 py-4 font-label text-xs tracking-widest uppercase hover:bg-primary/90 transition-colors"
-                >
-                  Stay Details
-                </Link>
                 <Link
                   href="/guide"
                   className="border border-outline text-primary px-10 py-4 font-label text-xs tracking-widest uppercase hover:bg-surface-container transition-colors"
