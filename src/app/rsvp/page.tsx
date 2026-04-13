@@ -7,9 +7,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { submitRSVP, checkDuplicateRSVP, checkInvitation } from "./actions";
 
+const EVENT_INFO: Record<string, { date: string; time?: string; location: string }> = {
+  "Devara Samradhane": { date: "July 6th", time: "9:00 AM onwards", location: "Ekadanta Mandira" },
+  "Devara Samaradhane": { date: "July 6th", time: "9:00 AM onwards", location: "Ekadanta Mandira" },
+  "Welcome Lunch": { date: "July 10th", location: "Zinnia, Sheraton" },
+  "Sangeet & Afterparty": { date: "July 10th", location: "Scarlet Ballroom" },
+  "Mehendi followed by Lunch": { date: "July 11th", location: "Party Lawn" },
+  "Varapuje": { date: "July 11th", location: "Zinnia" },
+  "Wedding": { date: "July 12th", location: "Convention Center" },
+  "Reception": { date: "July 12th", location: "Scarlet Ballroom" }
+};
+
 export default function RSVP() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "duplicate">("idle");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isItineraryOpen, setIsItineraryOpen] = useState(false);
   const [invitedEvents, setInvitedEvents] = useState<string[] | null>(null);
   const [lookupMessage, setLookupMessage] = useState<string | null>(null);
   const [eventResponses, setEventResponses] = useState<Record<string, 'attending' | 'declined'>>({});
@@ -206,6 +218,14 @@ export default function RSVP() {
               <span className="font-headline text-2xl text-on-surface-variant">Neha & Karthik</span>
               <span className="h-px w-12 bg-outline-variant opacity-30"></span>
             </div>
+            
+            <button
+              onClick={() => setIsItineraryOpen(true)}
+              className="mt-12 group flex items-center justify-center gap-3 mx-auto px-8 py-3 bg-surface-container-low border border-outline-variant/30 rounded-full hover:bg-primary/5 transition-all shadow-sm"
+            >
+              <span className="material-symbols-outlined text-primary text-lg">event_note</span>
+              <span className="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant group-hover:text-primary transition-colors">See Wedding Schedule</span>
+            </button>
           </section>
 
           {/* RSVP Form Canvas */}
@@ -280,9 +300,6 @@ export default function RSVP() {
                       placeholder="hello@example.com"
                       type="email"
                     />
-                    {isVerifying && formData.email && (
-                      <span className="text-[10px] text-primary animate-pulse mt-1 block uppercase tracking-widest">Verifying Guest info...</span>
-                    )}
                   </div>
 
                   {/* Contact Number Input */}
@@ -321,8 +338,16 @@ export default function RSVP() {
                         {invitedEvents.map(event => (
                           <div key={event} className="group flex flex-col md:flex-row md:items-center justify-between p-6 bg-surface-container-low/50 hover:bg-surface-container-low rounded-sm transition-all border border-transparent hover:border-primary/10">
                             <div>
-                              <h4 className="font-headline text-2xl text-primary">{event}</h4>
+                              <div className="flex items-center gap-3">
+                                <h4 className="font-headline text-2xl text-primary">{event}</h4>
+                                {EVENT_INFO[event] && (
+                                  <span className="px-2 py-0.5 bg-primary/5 text-primary text-[9px] font-label uppercase tracking-widest rounded-sm border border-primary/10">
+                                    {EVENT_INFO[event].date}
+                                  </span>
+                                )}
+                              </div>
                               <p className="font-body text-xs text-on-surface-variant opacity-70 italic mt-1">
+                                {EVENT_INFO[event]?.time ? `${EVENT_INFO[event].time} • ` : ''}
                                 {eventResponses[event] === 'attending' ? 'You’re celebrating with us!' : 'You’ll be missed at this one.'}
                               </p>
                             </div>
@@ -620,6 +645,52 @@ export default function RSVP() {
       </div>
 
       <Footer />
+
+      {/* Itinerary Modal Overlay */}
+      {isItineraryOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-surface/80 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="bg-surface-container-lowest w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl rounded-sm border border-outline-variant/30 overflow-hidden relative">
+            {/* Modal Header */}
+            <div className="p-8 border-b border-outline-variant/10 flex items-center justify-between bg-surface-container-low">
+              <div>
+                <span className="font-label text-[10px] uppercase tracking-[0.3em] text-secondary block mb-1">Wedding Itinerary</span>
+                <h3 className="font-headline text-4xl text-primary leading-tight">July 2026</h3>
+              </div>
+              <button 
+                onClick={() => setIsItineraryOpen(false)}
+                className="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-dim transition-colors group"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant group-hover:rotate-90 transition-transform">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+              {Object.entries(EVENT_INFO).filter(([name]) => name !== "Devara Samaradhane").map(([name, info]) => (
+                <div key={name} className="flex gap-8 group/item">
+                  <div className="flex flex-col items-center pt-2">
+                    <span className="font-headline text-3xl text-secondary leading-none">{info.date.split(' ')[1].replace(/\D/g, '')}</span>
+                    <span className="font-label text-[8px] uppercase tracking-tighter opacity-40">{info.date.split(' ')[0]}</span>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <h4 className="font-headline text-2xl text-primary group-hover/item:text-secondary transition-colors">{name}</h4>
+                    <p className="font-body text-sm text-on-surface-variant italic">{info.time}</p>
+                    <div className="flex items-start gap-2 pt-2">
+                      <span className="material-symbols-outlined text-[14px] text-secondary/60 mt-0.5">location_on</span>
+                      <p className="font-label text-[10px] uppercase tracking-widest opacity-60 leading-relaxed max-w-xs">{info.location}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-8 bg-surface-container-low border-t border-outline-variant/10 text-center">
+              <p className="font-body text-xs text-on-surface-variant opacity-60">Venue details are also available on the <Link href="/events" className="text-secondary border-b border-secondary/30 pb-0.5">Events Page</Link></p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
