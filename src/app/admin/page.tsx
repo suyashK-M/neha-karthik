@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { fetchRSVPs } from "./actions";
+import { fetchRSVPs, deleteRSVP } from "./actions";
 
 interface RSVPRecord {
   timestamp: string;
@@ -22,6 +22,8 @@ export default function AdminDashboard() {
   const [rsvps, setRsvps] = useState<RSVPRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null); // Stores the timestamp of the record being deleted
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // Filter & UI States
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,6 +110,24 @@ export default function AdminDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDelete = async (timestamp: string) => {
+    setIsDeleting(timestamp);
+    try {
+      const result = await deleteRSVP(timestamp);
+      if (result.success) {
+        setRsvps(prev => prev.filter(r => r.timestamp !== timestamp));
+        setConfirmDelete(null);
+      } else {
+        alert(result.error || "Failed to delete entry");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("An unexpected error occurred while deleting.");
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   return (
@@ -222,6 +242,7 @@ export default function AdminDashboard() {
                         <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">The Celebration</th>
                         <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant text-center">Count</th>
                         <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Contact info</th>
+                        <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/10">
@@ -256,6 +277,34 @@ export default function AdminDashboard() {
                             <div className="font-body text-[11px] text-on-surface-variant opacity-60 italic">
                               {rsvp.email}
                             </div>
+                          </td>
+                          <td className="p-6 text-right">
+                            {confirmDelete === rsvp.timestamp ? (
+                              <div className="flex items-center justify-end gap-2 animate-in fade-in slide-in-from-right-2">
+                                <button
+                                  onClick={() => setConfirmDelete(null)}
+                                  className="px-3 py-1 font-label text-[9px] uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors"
+                                  disabled={isDeleting === rsvp.timestamp}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(rsvp.timestamp)}
+                                  className="px-3 py-1 bg-secondary text-on-secondary font-label text-[9px] uppercase tracking-widest rounded-full shadow-sm hover:scale-105 transition-all"
+                                  disabled={isDeleting === rsvp.timestamp}
+                                >
+                                  {isDeleting === rsvp.timestamp ? 'Deleting...' : 'Confirm'}
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDelete(rsvp.timestamp)}
+                                className="p-2 text-on-surface-variant hover:text-secondary hover:bg-secondary/5 rounded-full transition-all group/delete"
+                                title="Delete Entry"
+                              >
+                                <span className="material-symbols-outlined text-lg group-hover/delete:scale-110 transition-transform">delete</span>
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

@@ -41,3 +41,27 @@ export async function fetchRSVPs() {
     return { success: false, error: error.message };
   }
 }
+export async function deleteRSVP(timestamp: string) {
+  const scriptUrl = "https://script.google.com/macros/s/AKfycbzsQkf238rutNUzfkcTez2fljeyxrueRA9ciLeV0yA1rAQ3wyBOK8zQP_9u1Ccss2Pk/exec";
+
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "delete",
+        timestamp: timestamp
+      }),
+      cache: 'no-store',
+      redirect: 'follow'
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error: any) {
+    console.error("deleteRSVP Error:", error);
+    return { success: false, error: error.message };
+  }
+}
