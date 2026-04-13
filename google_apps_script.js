@@ -68,8 +68,9 @@ function doGet(e) {
     let emailRaw = row[3] ? row[3].toString() : "";
     let emailClean = emailRaw.toLowerCase().trim();
     
-    // Check match
-    if (cleanId === phoneClean || cleanId === emailClean) {
+    // Check match — use includes() for phone to catch bulk entries like
+    // "+91 9740660530 / Rekha +91 9902001470 / Bhagyashree +91 9741475978"
+    if (phoneClean.includes(cleanId) || cleanId === emailClean) {
       console.log("MATCH FOUND at row " + (i + 1) + " (Name: " + row[1] + ")");
       results.found = true;
       for (let j = 11; j < headers.length; j++) {
