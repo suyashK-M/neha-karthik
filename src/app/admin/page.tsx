@@ -11,12 +11,24 @@ interface RSVPRecord {
   fullName: string;
   email: string;
   guestCount: string | number;
+  contactNumber?: string;
+  dietary?: string;
+  accessibility?: string;
+  foodAllergies?: string;
+  additionalGuests?: string;
 }
 
 export default function AdminDashboard() {
   const [rsvps, setRsvps] = useState<RSVPRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter & UI States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [eventFilter, setEventFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"date-desc" | "date-asc" | "alpha-asc">("date-desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30;
 
   useEffect(() => {
     async function loadData() {
@@ -31,7 +43,72 @@ export default function AdminDashboard() {
     loadData();
   }, []);
 
+  // Get unique events for filtering
+  const uniqueEvents = Array.from(new Set(rsvps.flatMap(r => {
+    if (r.event.includes(" | ")) {
+      return r.event.split(" | ").map(e => e.split(":")[0].trim());
+    }
+    return [r.event];
+  }))).sort();
+
+  // FILTERING LOGIC
+  const filteredRsvps = rsvps.filter((rsvp) => {
+    const matchesSearch = 
+      rsvp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (rsvp.contactNumber && String(rsvp.contactNumber).includes(searchTerm)) ||
+      rsvp.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesEvent = eventFilter === "all" || rsvp.event.includes(eventFilter);
+    
+    return matchesSearch && matchesEvent;
+  });
+
+  // SORTING LOGIC
+  const sortedRsvps = [...filteredRsvps].sort((a, b) => {
+    if (sortBy === "date-desc") return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    if (sortBy === "date-asc") return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    if (sortBy === "alpha-asc") return a.fullName.localeCompare(b.fullName);
+    return 0;
+  });
+
+  // PAGINATION LOGIC
+  const totalItems = sortedRsvps.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRsvps = sortedRsvps.slice(startIndex, startIndex + itemsPerPage);
+
   const totalGuests = rsvps.reduce((sum, rsvp) => sum + Number(rsvp.guestCount || 0), 0);
+
+  const handleExport = () => {
+    const headers = ["Date", "Name", "Email", "Phone", "Event Responses", "Total Guests", "Dietary", "Allergies", "Accessibility", "Additional Guests"];
+    const rows = sortedRsvps.map(r => [
+      new Date(r.timestamp).toLocaleString(),
+      r.fullName,
+      r.email,
+      `'${r.contactNumber || ""}`, // Prefix with ' to prevent Excel formatting issues
+      r.event,
+      r.guestCount,
+      r.dietary || "",
+      r.foodAllergies || "",
+      r.accessibility || "",
+      r.additionalGuests || ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell.toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `RSVP_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <main className="min-h-screen bg-surface dot-pattern">
@@ -53,7 +130,14 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            <div className="flex gap-12 bg-surface-container-lowest p-8 shadow-sm border border-outline-variant/30 rounded-sm">
+            <div className="flex bg-surface-container-lowest p-8 shadow-sm border border-outline-variant/30 rounded-sm relative">
+              <button 
+                onClick={handleExport}
+                className="absolute -top-4 -right-4 bg-primary text-on-primary p-3 rounded-full shadow-lg hover:scale-105 transition-all group"
+                title="Export current view to CSV"
+              >
+                <span className="material-symbols-outlined text-xl">download</span>
+              </button>
               <div className="text-center md:text-left">
                 <div className="font-label text-on-surface-variant text-[10px] uppercase tracking-widest mb-1">Total RSVP Entries</div>
                 <div className="font-headline text-4xl text-primary">{rsvps.length}</div>
@@ -65,6 +149,50 @@ export default function AdminDashboard() {
               </div>
             </div>
           </header>
+
+          {/* Controls Bar */}
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="md:col-span-2 relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
+              <input
+                type="text"
+                placeholder="Search by name or contact number..."
+                className="w-full pl-12 pr-4 py-4 bg-surface-container-lowest border border-outline-variant/30 rounded-full font-body text-sm focus:outline-none focus:border-primary/50 transition-all text-primary"
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+
+            {/* Event Filter */}
+            <div className="relative">
+              <select
+                className="w-full px-4 py-4 bg-surface-container-lowest border border-outline-variant/30 rounded-full font-label text-[10px] uppercase tracking-widest text-on-surface-variant appearance-none focus:outline-none focus:border-primary/50 transition-all cursor-pointer"
+                value={eventFilter}
+                onChange={(e) => { setEventFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="all">Everywhere</option>
+                {uniqueEvents.map(evt => (
+                  <option key={evt} value={evt}>{evt}</option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">filter_list</span>
+            </div>
+
+            {/* Sort */}
+            <div className="relative">
+              <select
+                className="w-full px-4 py-4 bg-surface-container-lowest border border-outline-variant/30 rounded-full font-label text-[10px] uppercase tracking-widest text-on-surface-variant appearance-none focus:outline-none focus:border-primary/50 transition-all cursor-pointer"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+              >
+                <option value="date-desc">Latest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="alpha-asc">Alphabetical (A-Z)</option>
+              </select>
+              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">sort_by_alpha</span>
+            </div>
+          </div>
 
           {/* Data Table */}
           <div className="bg-surface-container-lowest shadow-2xl rounded-sm overflow-hidden border border-outline-variant/20">
@@ -78,48 +206,103 @@ export default function AdminDashboard() {
                 <span className="material-symbols-outlined text-4xl">error</span>
                 <p className="font-label text-[10px] uppercase tracking-[0.2em]">{error}</p>
               </div>
-            ) : rsvps.length === 0 ? (
+            ) : filteredRsvps.length === 0 ? (
               <div className="py-40 text-center text-on-surface-variant space-y-4">
-                <span className="material-symbols-outlined text-4xl">inventory_2</span>
-                <p className="font-body italic text-lg text-surface-dim">No responses logged yet.</p>
+                <span className="material-symbols-outlined text-4xl">search_off</span>
+                <p className="font-body italic text-lg text-surface-dim">No matching guests found.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-surface-container-low border-b border-outline-variant/30">
-                      <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Entry Date</th>
-                      <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Guest Name</th>
-                      <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">The Celebration</th>
-                      <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant text-center">Count</th>
-                      <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Contact info</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/10">
-                    {rsvps.slice().reverse().map((rsvp, idx) => (
-                      <tr key={idx} className="hover:bg-surface-container/30 transition-colors">
-                        <td className="p-6 font-body text-xs text-on-surface-variant font-medium">
-                          {new Date(rsvp.timestamp).toLocaleDateString()}
-                        </td>
-                        <td className="p-6">
-                          <div className="font-headline text-xl text-primary">{rsvp.fullName}</div>
-                        </td>
-                        <td className="p-6">
-                            <span className="px-3 py-1 bg-primary/5 text-primary-container font-label text-[9px] uppercase tracking-widest rounded-full border border-primary/10">
-                              {rsvp.event}
-                            </span>
-                        </td>
-                        <td className="p-6 text-center">
-                          <div className="font-headline text-2xl text-secondary">{rsvp.guestCount}</div>
-                        </td>
-                        <td className="p-6 font-body text-sm text-on-surface-variant italic">
-                          {rsvp.email}
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[1000px]">
+                    <thead>
+                      <tr className="bg-surface-container-low border-b border-outline-variant/30">
+                        <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Entry Date</th>
+                        <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Guest Name</th>
+                        <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">The Celebration</th>
+                        <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant text-center">Count</th>
+                        <th className="p-6 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Contact info</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {paginatedRsvps.map((rsvp, idx) => (
+                        <tr key={idx} className="hover:bg-surface-container/30 transition-colors group/row">
+                          <td className="p-6 font-body text-xs text-on-surface-variant font-medium">
+                            {new Date(rsvp.timestamp).toLocaleDateString()}
+                          </td>
+                          <td className="p-6">
+                            <div className="font-headline text-xl text-primary group-hover/row:translate-x-1 transition-transform">{rsvp.fullName}</div>
+                          </td>
+                          <td className="p-6">
+                              <div className="flex flex-wrap gap-2">
+                                {rsvp.event.split(" | ").map((evt, eIdx) => (
+                                  <span key={eIdx} className={`px-3 py-1 font-label text-[9px] uppercase tracking-widest rounded-full border ${
+                                    evt.includes('Attending') 
+                                      ? 'bg-primary/5 text-primary border-primary/20' 
+                                      : 'bg-secondary/5 text-secondary border-secondary/10 opacity-70'
+                                  }`}>
+                                    {evt}
+                                  </span>
+                                ))}
+                              </div>
+                          </td>
+                          <td className="p-6 text-center">
+                            <div className="font-headline text-2xl text-secondary">{rsvp.guestCount}</div>
+                          </td>
+                          <td className="p-6 space-y-1">
+                            <div className="font-body text-xs text-on-surface-variant font-semibold">
+                              {rsvp.contactNumber || "No Number"}
+                            </div>
+                            <div className="font-body text-[11px] text-on-surface-variant opacity-60 italic">
+                              {rsvp.email}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="p-6 border-t border-outline-variant/20 flex flex-col md:flex-row items-center justify-between gap-6 bg-surface-container-low/30">
+                  <p className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">
+                    Showing {startIndex + 1} - {Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} Entries
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => prev - 1)}
+                      className="p-2 text-primary disabled:opacity-30 hover:bg-primary/5 rounded-full transition-all"
+                    >
+                      <span className="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-8 h-8 rounded-full font-label text-[10px] transition-all ${
+                            currentPage === page 
+                              ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' 
+                              : 'text-on-surface-variant hover:bg-primary/5'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      className="p-2 text-primary disabled:opacity-30 hover:bg-primary/5 rounded-full transition-all"
+                    >
+                      <span className="material-symbols-outlined">chevron_right</span>
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
 

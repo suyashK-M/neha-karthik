@@ -1,9 +1,23 @@
+"use client";
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function Home() {
+  const [isStoryOpen, setIsStoryOpen] = useState(false);
+
+  // Lock scroll when modal is open
+  useEffect(() => {
+    if (isStoryOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [isStoryOpen]);
+
   return (
     <main className="min-h-screen bg-surface">
       <Navbar />
@@ -11,7 +25,7 @@ export default function Home() {
       <div className="pt-24">
         {/* Hero Section: The Imperial Union */}
         <section className="relative min-h-[calc(100vh-6rem)] flex flex-col md:flex-row items-center overflow-hidden px-8 md:px-20 gap-12">
-          <div className="w-full md:w-5/12 z-10 space-y-8 mt-12 md:mt-0">
+          <div className="w-full md:w-5/12 z-10 space-y-8 mt-12 md:mt-0 flex flex-col text-left">
             <div className="space-y-4">
               <span className="font-label text-secondary text-xs tracking-[0.3em] uppercase">
                 Est. 2026 • Bangalore, India
@@ -23,21 +37,26 @@ export default function Home() {
             <p className="font-headline italic text-2xl text-on-surface-variant max-w-md">
               A celebration of legacy, love, and the coming together of two families in the heart of the Garden City.
             </p>
-            <div className="flex items-center gap-6 pt-4">
-              <button className="bg-linear-to-r from-primary to-primary-container text-on-primary px-10 py-4 font-label text-sm tracking-widest uppercase shadow-xl hover:opacity-90 transition-opacity">
-                Save the Date
-              </button>
-              <button className="text-secondary font-label text-sm tracking-widest uppercase relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-secondary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300">
+            <div className="flex flex-wrap items-center justify-start gap-6 pt-4">
+              <Link href="/rsvp">
+                <button className="bg-linear-to-r from-primary to-primary-container text-on-primary px-10 py-4 font-label text-sm tracking-widest uppercase shadow-xl hover:opacity-90 transition-opacity">
+                  Save the Date
+                </button>
+              </Link>
+              <button 
+                onClick={() => setIsStoryOpen(true)}
+                className="text-secondary font-label text-sm tracking-widest uppercase relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-secondary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+              >
                 Our Story
               </button>
             </div>
           </div>
 
           {/* Asymmetric Image Breakout */}
-          <div className="relative w-full md:w-7/12 h-[600px] md:h-[800px] bg-surface-container-low group">
-            <div className="absolute inset-0 transform translate-x-4 translate-y-4 md:translate-x-12 md:translate-y-12 transition-transform duration-700 group-hover:translate-x-8 group-hover:translate-y-8">
+          <div className="relative w-full md:w-7/12 aspect-4/5 md:aspect-none md:h-[800px] bg-surface-container-low group">
+            <div className="absolute inset-0 transform translate-x-0 translate-y-4 md:translate-x-12 md:translate-y-12 transition-transform duration-700 md:group-hover:translate-x-8 group-hover:translate-y-8">
               <Image
-                src="/assets/romanticCouple.jpeg"
+                src="/assets/neha-karthik-hero.webp"
                 alt="Neha & Karthik"
                 fill
                 className="object-cover"
@@ -167,6 +186,66 @@ export default function Home() {
           </div>
         </section>
       </div>
+
+      {/* Story Modal */}
+      {isStoryOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 md:p-8">
+          <div 
+            className="absolute inset-0 bg-primary/40 backdrop-blur-md transition-opacity"
+            onClick={() => setIsStoryOpen(false)}
+          />
+          
+          <div className="relative w-full max-w-5xl bg-white shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[90vh] rounded-sm">
+            <button 
+              onClick={() => setIsStoryOpen(false)}
+              className="absolute top-6 right-6 z-20 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-lg"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <div className="w-full md:w-5/12 relative min-h-[300px] md:h-auto">
+              <Image
+                src="/assets/couple_purple_wedding.webp"
+                alt="Neha & Karthik"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 40vw"
+              />
+              <div className="absolute inset-0 bg-secondary/10" />
+            </div>
+
+            <div className="w-full md:w-7/12 p-8 md:p-16 overflow-y-auto bg-surface border-l border-outline-variant/10">
+              <div className="space-y-10">
+                <div className="space-y-4">
+                  <span className="font-label text-secondary tracking-[0.4em] uppercase text-[10px] block">The Anthology</span>
+                  <h2 className="font-headline text-5xl md:text-7xl text-primary leading-tight italic">Two Paths, <br /> One Destiny</h2>
+                </div>
+
+                <div className="font-body text-lg text-on-surface-variant leading-relaxed space-y-8 first-letter:text-5xl first-letter:font-headline first-letter:text-secondary first-letter:mr-3 first-letter:float-left">
+                  <p>
+                    Once upon a time, in the vibrant heart of the Garden City, two souls found themselves intertwined in a story of legacy and love. Neha, a spirit of elegance and grace, met Karthik, a man of vision and warmth, under the soft canopy of Bangalore's sandalwood-scented air.
+                  </p>
+                  <p>
+                    What began as a chance encounter soon blossomed into a connection that transcended the ordinary. They found in each other a reflection of their own dreams—a shared passion for heritage, a deep respect for tradition, and a modern zest for life that made every moment together a celebrated affair.
+                  </p>
+                  <p>
+                    From quiet walks through the lush Lalbagh gardens to the high-energy pulse of the Whitefield evening, their journey was marked by laughter, discovery, and the realization that their separate paths were always meant to converge. 
+                  </p>
+                  <p>
+                    Karthik's steadfast nature provided the perfect anchor for Neha's vibrant spirit, and together, they built a world where the past is honored and the future is embraced with open arms.
+                  </p>
+                  <p>
+                    Now, as they stand at the threshold of their "Forever," they invite you—the most cherished people in their lives—to join them in the next chapter of this royal anthology. A celebration of a union that was always written in the stars, right here in the pulse of the city they call home.
+                  </p>
+                  <div className="pt-12 border-t border-outline-variant/10 italic text-secondary font-headline text-3xl">
+                    "Forever starts here, amidst the jasmine and the joy."
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </main>

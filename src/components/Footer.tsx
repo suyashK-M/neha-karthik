@@ -6,18 +6,18 @@ const Footer = () => {
       <div className="font-headline italic text-xl text-surface">
         Neha & Karthik
       </div>
-      <div className="flex gap-8">
+      <div className="flex flex-wrap justify-center gap-6 md:gap-8 px-6">
         <Link
-          href="/registry"
+          href="/travel"
           className="font-label text-xs tracking-widest uppercase text-primary-fixed/60 hover:text-white transition-opacity"
         >
-          Gift Registry
+          Travel Info
         </Link>
         <Link
           href="/contact"
           className="font-label text-xs tracking-widest uppercase text-primary-fixed/60 hover:text-white transition-opacity"
         >
-          Contact Us
+          Contact US
         </Link>
       </div>
       <p className="font-label text-[10px] tracking-widest opacity-40 uppercase">
