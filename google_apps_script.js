@@ -10,6 +10,25 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(LOG_SHEET_NAME);
+
+    // --- DELETE HANDLER ---
+    if (payload.type === "delete") {
+      const targetTimestamp = payload.timestamp;
+      const data = sheet.getDataRange().getValues();
+      // Start from row 2 (index 1) to skip header
+      for (let i = 1; i < data.length; i++) {
+        const rowTimestamp = data[i][0] ? new Date(data[i][0]).toISOString() : "";
+        if (rowTimestamp === targetTimestamp) {
+          sheet.deleteRow(i + 1); // Sheet rows are 1-indexed, +1 for header
+          return ContentService.createTextOutput(JSON.stringify({ success: true, deleted: true }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Row not found" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // --- SUBMIT HANDLER ---
     const timestamp = new Date();
     
     sheet.appendRow([
