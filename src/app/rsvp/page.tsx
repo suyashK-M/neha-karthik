@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Image from "next/image";
@@ -13,6 +13,7 @@ export default function RSVP() {
   const [invitedEvents, setInvitedEvents] = useState<string[] | null>(null);
   const [lookupMessage, setLookupMessage] = useState<string | null>(null);
   const [eventResponses, setEventResponses] = useState<Record<string, 'attending' | 'declined'>>({});
+  const [generalAttendance, setGeneralAttendance] = useState<'attending' | 'declined'>('attending');
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -34,10 +35,38 @@ export default function RSVP() {
     setIsVerifying(true);
     setLookupMessage(null);
     try {
-      const result = await checkInvitation(identifier);
+      // 1. Build a list of variants to try, in priority order
+      const isPhone = !identifier.includes('@');
+      const variants: string[] = [];
+
+      if (isPhone) {
+        const digitsOnly = identifier.replace(/\D/g, '');
+        const last10 = digitsOnly.slice(-10);
+        // Try all relevant formats — stop at first match
+        if (digitsOnly) variants.push(digitsOnly);
+        if (last10 && last10 !== digitsOnly) variants.push(last10);
+        if (last10.length === 10) {
+          variants.push(`91${last10}`);  // e.g. 919902001470
+          variants.push(`+91${last10}`); // e.g. +919902001470
+        }
+      } else {
+        variants.push(identifier);
+      }
+
+      // 2. Try each variant until we get a match
+      let result = { success: false, found: false, invitedEvents: [] as string[] };
+      for (const q of variants) {
+        const attempt = await checkInvitation(q);
+        if (attempt.success && attempt.found) {
+          result = attempt;
+          break;
+        }
+        if (attempt.success) result = attempt; // keep last valid response
+      }
+
       if (result.success && result.found) {
         setInvitedEvents(result.invitedEvents);
-        setLookupMessage(`Invitation found! You are invited to: ${result.invitedEvents.join(", ")}`);
+        setLookupMessage("Invitation found!");
         
         // Initialize all as attending by default
         const initialResponses: Record<string, 'attending' | 'declined'> = {};
@@ -46,7 +75,7 @@ export default function RSVP() {
         });
         setEventResponses(initialResponses);
       } else if (result.success && !result.found) {
-        setInvitedEvents([]);
+        setInvitedEvents(null);
         setLookupMessage("We couldn't find an invitation for this info. Please check your details or contact us.");
       }
     } catch (error) {
@@ -55,6 +84,25 @@ export default function RSVP() {
       setIsVerifying(false);
     }
   };
+
+  // Auto-lookup with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.email && formData.email.includes('@') && formData.email.includes('.')) {
+        handleLookup(formData.email);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [formData.email]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.contactNumber && formData.contactNumber.length >= 10) {
+        handleLookup(formData.contactNumber);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [formData.contactNumber]);
 
   const addGuest = () => {
     setFormData(prev => ({
@@ -99,11 +147,17 @@ export default function RSVP() {
         .filter(Boolean)
         .join(", ");
 
-      const eventSummary = Object.entries(eventResponses)
-        .map(([event, status]) => `${event}: ${status === 'attending' ? 'Attending' : 'Declining'}`)
-        .join(" | ");
+      const isGeneralGuest = invitedEvents && invitedEvents.length === 0;
+      
+      const eventSummary = isGeneralGuest 
+        ? `General Attendance: ${generalAttendance === 'attending' ? 'Attending' : 'Declining'}`
+        : Object.entries(eventResponses)
+            .map(([event, status]) => `${event}: ${status === 'attending' ? 'Attending' : 'Declining'}`)
+            .join(" | ");
 
-      const isOverallAttending = Object.values(eventResponses).some(s => s === 'attending');
+      const isOverallAttending = isGeneralGuest 
+        ? generalAttendance === 'attending'
+        : Object.values(eventResponses).some(s => s === 'attending');
 
       const payload = {
         date: new Date().toLocaleString(),
@@ -225,7 +279,6 @@ export default function RSVP() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      onBlur={() => handleLookup(formData.email)}
                       required
                       className="input-underline w-full font-headline text-2xl placeholder:text-surface-dim py-4 text-primary"
                       placeholder="hello@example.com"
@@ -245,14 +298,13 @@ export default function RSVP() {
                       name="contactNumber"
                       value={formData.contactNumber}
                       onChange={handleChange}
-                      onBlur={() => handleLookup(formData.contactNumber)}
                       required
                       className="input-underline w-full font-headline text-2xl placeholder:text-surface-dim py-4 text-primary"
                       placeholder="e.g. +1 555-0123"
                       type="tel"
                     />
                     {isVerifying && formData.contactNumber && (
-                      <span className="text-[10px] text-primary animate-pulse mt-1 block uppercase tracking-widest">Verifying Phone...</span>
+                      <span className="text-[10px] text-primary animate-pulse mt-1 block uppercase tracking-widest">Verifying Guest info...</span>
                     )}
                   </div>
                 </div>
@@ -263,7 +315,7 @@ export default function RSVP() {
                   </div>
                 )}
 
-                {invitedEvents && (
+                {invitedEvents && invitedEvents.length > 0 && (
                   <div className="space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
                     <div className="border-t border-outline-variant/20 pt-12">
                       <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-8 block">
@@ -278,14 +330,14 @@ export default function RSVP() {
                                 {eventResponses[event] === 'attending' ? 'You’re celebrating with us!' : 'You’ll be missed at this one.'}
                               </p>
                             </div>
-                            <div className="flex items-center gap-3 mt-4 md:mt-0 bg-surface p-1 rounded-sm border border-outline-variant/30">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-6 md:mt-0 bg-surface md:p-1 rounded-sm md:border border-outline-variant/30">
                               <button
                                 type="button"
                                 onClick={() => setEventResponses(prev => ({ ...prev, [event]: 'attending' }))}
-                                className={`px-6 py-2 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
+                                className={`px-6 py-3 md:py-2 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
                                   eventResponses[event] === 'attending' 
                                     ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' 
-                                    : 'text-on-surface-variant hover:bg-primary/5'
+                                    : 'text-on-surface-variant hover:bg-primary/5 bg-surface-container-low md:bg-transparent'
                                 }`}
                               >
                                 Attending
@@ -293,10 +345,10 @@ export default function RSVP() {
                               <button
                                 type="button"
                                 onClick={() => setEventResponses(prev => ({ ...prev, [event]: 'declined' }))}
-                                className={`px-6 py-2 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
+                                className={`px-6 py-3 md:py-2 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
                                   eventResponses[event] === 'declined' 
                                     ? 'bg-secondary text-on-secondary shadow-lg shadow-secondary/20' 
-                                    : 'text-on-surface-variant hover:bg-secondary/5'
+                                    : 'text-on-surface-variant hover:bg-secondary/5 bg-surface-container-low md:bg-transparent'
                                 }`}
                               >
                                 Declining
@@ -309,8 +361,47 @@ export default function RSVP() {
                   </div>
                 )}
 
+                {invitedEvents && invitedEvents.length === 0 && (
+                  <div className="space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="border-t border-outline-variant/20 pt-12">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between p-8 bg-primary/5 border border-primary/10 rounded-sm">
+                        <div className="space-y-2">
+                          <h4 className="font-headline text-3xl text-primary">Will you be attending?</h4>
+                          <p className="font-body text-sm text-on-surface-variant italic">
+                            {generalAttendance === 'attending' ? "We're so excited to have you!" : "We'll miss you!"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-6 md:mt-0 bg-surface p-1 rounded-sm border border-outline-variant/20">
+                          <button
+                            type="button"
+                            onClick={() => setGeneralAttendance('attending')}
+                            className={`px-10 py-3 md:py-3 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
+                              generalAttendance === 'attending' 
+                                ? 'bg-primary text-on-primary shadow-xl shadow-primary/20' 
+                                : 'text-on-surface-variant hover:bg-primary/5'
+                            }`}
+                          >
+                            Accepting
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setGeneralAttendance('declined')}
+                            className={`px-10 py-3 md:py-3 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
+                              generalAttendance === 'declined' 
+                                ? 'bg-secondary text-on-secondary shadow-xl shadow-secondary/20' 
+                                : 'text-on-surface-variant hover:bg-secondary/5'
+                            }`}
+                          >
+                            Declining
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Conditional Fields: Only show if attending at least one event */}
-                {Object.values(eventResponses).some(s => s === 'attending') && (
+                {(invitedEvents && invitedEvents.length === 0 ? generalAttendance === 'attending' : Object.values(eventResponses).some(s => s === 'attending')) && (
                   <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-outline-variant/20 pt-12">
                       {/* Dietary Choice */}
