@@ -5,16 +5,19 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import Link from "next/link";
-import { submitRSVP, checkDuplicateRSVP } from "./actions";
+import { submitRSVP, checkDuplicateRSVP, checkInvitation } from "./actions";
 
 export default function RSVP() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "duplicate">("idle");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [invitedEvents, setInvitedEvents] = useState<string[] | null>(null);
+  const [lookupMessage, setLookupMessage] = useState<string | null>(null);
+  const [eventResponses, setEventResponses] = useState<Record<string, 'attending' | 'declined'>>({});
+  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     contactNumber: "",
-    event: "The Grand Union (Wedding)",
-    attendance: "attending",
     dietaryChoice: "no",
     dietaryDetails: "",
     allergiesChoice: "no",
@@ -24,6 +27,34 @@ export default function RSVP() {
     hasAdditionalGuests: "no",
     additionalGuests: [] as { id: string; firstName: string; lastName: string }[]
   });
+
+  const handleLookup = async (identifier: string) => {
+    if (!identifier || identifier.length < 5) return;
+    
+    setIsVerifying(true);
+    setLookupMessage(null);
+    try {
+      const result = await checkInvitation(identifier);
+      if (result.success && result.found) {
+        setInvitedEvents(result.invitedEvents);
+        setLookupMessage(`Invitation found! You are invited to: ${result.invitedEvents.join(", ")}`);
+        
+        // Initialize all as attending by default
+        const initialResponses: Record<string, 'attending' | 'declined'> = {};
+        result.invitedEvents.forEach((evt: string) => {
+          initialResponses[evt] = 'attending';
+        });
+        setEventResponses(initialResponses);
+      } else if (result.success && !result.found) {
+        setInvitedEvents([]);
+        setLookupMessage("We couldn't find an invitation for this info. Please check your details or contact us.");
+      }
+    } catch (error) {
+      console.error("Lookup error:", error);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const addGuest = () => {
     setFormData(prev => ({
@@ -68,16 +99,24 @@ export default function RSVP() {
         .filter(Boolean)
         .join(", ");
 
+      const eventSummary = Object.entries(eventResponses)
+        .map(([event, status]) => `${event}: ${status === 'attending' ? 'Attending' : 'Declining'}`)
+        .join(" | ");
+
+      const isOverallAttending = Object.values(eventResponses).some(s => s === 'attending');
+
       const payload = {
-        date: new Date().toLocaleDateString(),
-        event: formData.event,
+        date: new Date().toLocaleString(),
+        event: eventSummary,
         fullName: formData.fullName,
         email: formData.email,
         contactNumber: formData.contactNumber,
-        guestCount: formData.attendance === "attending" ? (1 + formData.additionalGuests.length).toString() : "0",
-        attendance: formData.attendance,
-        dietary: restrictions,
-        additionalGuests: guestNames
+        guestCount: isOverallAttending ? (1 + formData.additionalGuests.length).toString() : "0",
+        attendance: isOverallAttending ? "attending" : "declined",
+        dietary: formData.dietaryChoice === "yes" ? formData.dietaryDetails : "None",
+        additionalGuests: guestNames,
+        accessibility: formData.accessibilityChoice === "yes" ? formData.accessibilityDetails : "None",
+        foodAllergies: formData.allergiesChoice === "yes" ? formData.allergiesDetails : "None"
       };
 
       // Submit
@@ -186,11 +225,15 @@ export default function RSVP() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
+                      onBlur={() => handleLookup(formData.email)}
                       required
                       className="input-underline w-full font-headline text-2xl placeholder:text-surface-dim py-4 text-primary"
                       placeholder="hello@example.com"
                       type="email"
                     />
+                    {isVerifying && formData.email && (
+                      <span className="text-[10px] text-primary animate-pulse mt-1 block uppercase tracking-widest">Verifying Guest info...</span>
+                    )}
                   </div>
 
                   {/* Contact Number Input */}
@@ -202,71 +245,72 @@ export default function RSVP() {
                       name="contactNumber"
                       value={formData.contactNumber}
                       onChange={handleChange}
+                      onBlur={() => handleLookup(formData.contactNumber)}
                       required
                       className="input-underline w-full font-headline text-2xl placeholder:text-surface-dim py-4 text-primary"
-                      placeholder="e.g. +1 555-0123 or +91 98765 43210"
+                      placeholder="e.g. +1 555-0123"
                       type="tel"
                     />
+                    {isVerifying && formData.contactNumber && (
+                      <span className="text-[10px] text-primary animate-pulse mt-1 block uppercase tracking-widest">Verifying Phone...</span>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  {/* Event Selection */}
-                  <div className="group">
-                    <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2 block">
-                      The Celebration
-                    </label>
-                    <select
-                      name="event"
-                      value={formData.event}
-                      onChange={handleChange}
-                      className="input-underline w-full font-headline text-2xl py-4 text-primary appearance-none bg-transparent"
-                    >
-                      <option>The Grand Union (Wedding)</option>
-                      <option>Sangeet & Soiree</option>
-                      <option>The Afterparty</option>
-                      <option>All Celebrations</option>
-                    </select>
+                {lookupMessage && (
+                  <div className={`p-4 rounded-sm text-xs font-label tracking-wide uppercase ${invitedEvents && invitedEvents.length > 0 ? 'bg-primary/5 text-primary border border-primary/10' : 'bg-secondary/5 text-secondary border border-secondary/10'}`}>
+                    {lookupMessage}
                   </div>
+                )}
 
-                  {/* Attendance Choice */}
-                  <div className="group">
-                    <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-6 block">
-                      Attendance
-                    </label>
-                    <div className="flex flex-col md:flex-row gap-8">
-                      <label className="flex items-center space-x-3 cursor-pointer group/radio">
-                        <input
-                          className="w-4 h-4 text-primary border-outline focus:ring-primary appearance-none border rounded-full checked:bg-primary transition-all"
-                          name="attendance"
-                          type="radio"
-                          value="attending"
-                          checked={formData.attendance === "attending"}
-                          onChange={handleChange}
-                        />
-                        <span className="font-body text-sm text-on-surface tracking-wide group-hover/radio:text-primary transition-colors">
-                          Attending with Pleasure
-                        </span>
+                {invitedEvents && (
+                  <div className="space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="border-t border-outline-variant/20 pt-12">
+                      <label className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-8 block">
+                        Your Personalized Celebrations
                       </label>
-                      <label className="flex items-center space-x-3 cursor-pointer group/radio">
-                        <input
-                          className="w-4 h-4 text-primary border-outline focus:ring-primary appearance-none border rounded-full checked:bg-primary transition-all"
-                          name="attendance"
-                          type="radio"
-                          value="declined"
-                          checked={formData.attendance === "declined"}
-                          onChange={handleChange}
-                        />
-                        <span className="font-body text-sm text-on-surface tracking-wide group-hover/radio:text-primary transition-colors">
-                          Regretfully Declines
-                        </span>
-                      </label>
+                      <div className="space-y-6">
+                        {invitedEvents.map(event => (
+                          <div key={event} className="group flex flex-col md:flex-row md:items-center justify-between p-6 bg-surface-container-low/50 hover:bg-surface-container-low rounded-sm transition-all border border-transparent hover:border-primary/10">
+                            <div>
+                              <h4 className="font-headline text-2xl text-primary">{event}</h4>
+                              <p className="font-body text-xs text-on-surface-variant opacity-70 italic mt-1">
+                                {eventResponses[event] === 'attending' ? 'You’re celebrating with us!' : 'You’ll be missed at this one.'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3 mt-4 md:mt-0 bg-surface p-1 rounded-sm border border-outline-variant/30">
+                              <button
+                                type="button"
+                                onClick={() => setEventResponses(prev => ({ ...prev, [event]: 'attending' }))}
+                                className={`px-6 py-2 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
+                                  eventResponses[event] === 'attending' 
+                                    ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' 
+                                    : 'text-on-surface-variant hover:bg-primary/5'
+                                }`}
+                              >
+                                Attending
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEventResponses(prev => ({ ...prev, [event]: 'declined' }))}
+                                className={`px-6 py-2 rounded-sm font-label text-[10px] uppercase tracking-widest transition-all ${
+                                  eventResponses[event] === 'declined' 
+                                    ? 'bg-secondary text-on-secondary shadow-lg shadow-secondary/20' 
+                                    : 'text-on-surface-variant hover:bg-secondary/5'
+                                }`}
+                              >
+                                Declining
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Conditional Fields: Only show if attending */}
-                {formData.attendance === "attending" && (
+                {/* Conditional Fields: Only show if attending at least one event */}
+                {Object.values(eventResponses).some(s => s === 'attending') && (
                   <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-outline-variant/20 pt-12">
                       {/* Dietary Choice */}

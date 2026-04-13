@@ -4,7 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 
 export default function Events() {
-  const events = [
+  interface WeddingEvent {
+    date: string;
+    title: string;
+    description: string;
+    location: string;
+    image: string;
+    atmosphere: string;
+    time?: string;
+  }
+
+  const events: WeddingEvent[] = [
     {
       date: "July 6th",
       time: "9:00 AM onwards",
@@ -19,7 +29,7 @@ export default function Events() {
       title: "Welcome Lunch",
       description: "A vibrant introduction to our celebrations. Join us for a curated afternoon of flavors and hospitality as we welcome our loved ones.",
       location: "Zinnia, Sheraton Whitefield",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD9s8O8-W18g71fo34cQLe2dNYWrcx-KhsgzDbvM323yBNoV5eT3gU76cOgIkhdpmCLwn9tyxXMLQGXROB7Q3kW1SL2ZmDUnnXA4vddy9qZN7hVEeNa5tVCbMZMHzkx7lQbW3tVKjsrpkiIFNk8tlEczPBb9xCYYnUbR7zBKzvFeDF4n6Rk7VbAGgv4U877f7marzehQTjcsqXPRKNQmk2IMWUJH35TVMllzDkIeo2Y2zpZb4W36yYuIjLajEx8I4IQtAt2IjkbGQ",
+      image: "/assets/zinnia.jpeg",
       atmosphere: "Warm & Welcoming",
     },
     {
@@ -51,7 +61,7 @@ export default function Events() {
       title: "The Wedding followed by Lunch",
       description: "The pinnacle of our union. A grand ceremony followed by a celebratory Banti Bhojanam lunch in both Scarlet and Zinnia.",
       location: "Convention Center / Scarlet Ballroom",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAtV8TBYG9JeaHCRjKVZazCF4ebGAwhm_tIIigO7DV-HxUyhKHqbvKOP4T9lAY5shvJ5dn4D4WEltV-oxz8EvfLCJzK3KfS_0WI1tAT5-tQNZhfoK3yZrLEv7PrjGejSPLj7bE8tGbloNiqD_Zh0Uj4hh_3_kD8eWkfd7R2p_4JMy8Wu1Of8j3ksL2GDpQplm6WKn-PkhZHmY36aeyUY6x8KcMHG2qUXlsVel8uy9a44vNLOtthXD6S-IfLjhx4JhPGK2YctiqPWw",
+      image: "/assets/convention_center_sheraton.avif",
       atmosphere: "Grand & Imperial",
     },
     {
@@ -59,24 +69,24 @@ export default function Events() {
       title: "Reception & Afterparty",
       description: "Concluding our celebrations with a grand reception and an unforgettable night of music and joy as a newly wed couple.",
       location: "Scarlet Ballroom",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAXO2EmZG2qkghraNHJuLFE2z8v-a8h_xeKphPxhj2Oos75knOAGTzNOlj7Uh5Y3TT01iQzn_AcOK8v4nN3BVy4O9XDx6ugVlRjjQLle0poqBXbdLdaUkbNtKiz3yBN0i-9-52uTTH1UiwfXVzU6slK-e3SUaZdfxj2KRkgcyUD-P5GnBcEMBRBGSh6e2y37_JhUXth0Hw2Dd1AeexyOmg2j9fZ2xtcA4EMDtS02jgPWovY1oR6-I38ySuz0HBj_-lJWFWcIEZM2w",
+      image: "/assets/scarlet_alfersco.webp",
       atmosphere: "Celebratory & Royal",
     },
   ];
 
   return (
-    <main className="min-h-screen bg-surface">
+    <main className="min-h-screen bg-surface overflow-x-hidden">
       <Navbar />
 
       <div className="pt-32 pb-24">
         {/* Page Header - Redesigned Editorial Hero */}
-        <header className="px-8 md:px-20 mb-24">
+        <header className="px-6 md:px-20 mb-16 md:mb-24">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-12">
             <div className="space-y-6">
               <span className="font-label text-[10px] uppercase tracking-[0.5em] text-secondary font-bold block">
                 The Itinerary
               </span>
-              <h1 className="font-headline text-8xl md:text-[11rem] text-primary leading-[0.8] tracking-tighter">
+              <h1 className="font-headline text-5xl sm:text-7xl md:text-[7rem] lg:text-[11rem] text-primary leading-[0.85] tracking-tighter">
                 Celebrations <br />
                 <span className="italic text-secondary">& Venues</span>
               </h1>
@@ -104,7 +114,7 @@ export default function Events() {
               className="grid grid-cols-1 md:grid-cols-12 gap-0 border-b border-outline-variant/10 group overflow-hidden"
             >
               <div
-                className={`md:col-span-12 lg:col-span-5 px-8 md:px-20 py-16 md:py-32 flex flex-col justify-center ${
+                className={`md:col-span-12 lg:col-span-5 px-6 md:px-20 py-10 md:py-32 flex flex-col justify-center ${
                   index % 2 !== 0 ? "lg:order-2 bg-surface" : "bg-surface-container-low"
                 }`}
               >
@@ -119,7 +129,7 @@ export default function Events() {
                       </span>
                     )}
                   </div>
-                  <h2 className="font-headline text-5xl md:text-7xl text-primary leading-none tracking-tighter">
+                  <h2 className="font-headline text-4xl md:text-5xl lg:text-7xl text-primary leading-none tracking-tighter">
                     {event.title}
                   </h2>
                   <p className="font-body text-base md:text-lg text-on-surface-variant leading-relaxed italic max-w-md">
@@ -130,7 +140,7 @@ export default function Events() {
                       <span className="material-symbols-outlined text-primary text-xl mt-1 opacity-60">
                         location_on
                       </span>
-                      <p className="font-headline text-xl md:text-2xl leading-snug text-primary max-w-sm">
+                      <p className="font-headline text-lg md:text-xl lg:text-2xl leading-snug text-primary max-w-sm">
                         {event.location}
                       </p>
                     </div>
@@ -159,21 +169,26 @@ export default function Events() {
         </section>
 
         {/* Logistics Note */}
-        <section className="px-8 md:px-20 py-32">
+        <section className="px-6 md:px-20 py-16 md:py-32">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
             <div className="space-y-8">
-              <h3 className="font-headline text-5xl text-primary leading-tight">
+              <h3 className="font-headline text-4xl md:text-5xl text-primary leading-tight">
                 Arrival <br /> & <span className="italic">Logistics</span>
               </h3>
               <p className="font-body text-lg text-on-surface-variant leading-relaxed">
-                We have arranged dedicated shuttles between the primary residences and all wedding venues. 
-                For international guests and those requiring personal concierge assistance, 
-                our travel desk will be active throughout the weekend.
+                For our international guests and those traveling from afar, we have prepared a comprehensive guide to visas, flights, and local travel. 
+                Our team is also available for any personal concierge assistance you may need throughout the wedding week.
               </p>
-              <div className="flex gap-8">
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-8">
+                <Link
+                  href="/travel"
+                  className="bg-primary text-white border border-primary px-10 py-4 font-label text-xs tracking-widest uppercase hover:bg-secondary hover:border-secondary transition-colors text-center"
+                >
+                  Travel Info
+                </Link>
                 <Link
                   href="/guide"
-                  className="border border-outline text-primary px-10 py-4 font-label text-xs tracking-widest uppercase hover:bg-surface-container transition-colors"
+                  className="border border-outline text-primary px-10 py-4 font-label text-xs tracking-widest uppercase hover:bg-surface-container transition-colors text-center"
                 >
                   Bangalore Guide
                 </Link>

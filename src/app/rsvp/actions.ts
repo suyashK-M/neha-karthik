@@ -18,7 +18,6 @@ export async function submitRSVP(payload: any) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
       },
       body: JSON.stringify(payload),
       redirect: 'follow'
@@ -33,6 +32,31 @@ export async function submitRSVP(payload: any) {
     return { success: true };
   } catch (error: any) {
     console.error("Server Action RSVP Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function checkInvitation(identifier: string) {
+  try {
+    const response = await fetch(`${scriptUrl}?q=${encodeURIComponent(identifier)}`, {
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      },
+      cache: 'no-store',
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      console.error("Google Script FETCH Error:", response.status);
+      throw new Error(`Google Script Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Invitation Lookup Result for", identifier, ":", data);
+    return { success: true, ...data };
+  } catch (error: any) {
+    console.error("checkInvitation Error:", error);
     return { success: false, error: error.message };
   }
 }
