@@ -8,6 +8,12 @@ const Footer = () => {
       </div>
       <div className="flex flex-wrap justify-center gap-6 md:gap-8 px-6">
         <Link
+          href="/venue"
+          className="font-label text-xs tracking-widest uppercase text-primary-fixed/60 hover:text-white transition-opacity"
+        >
+          The Venue
+        </Link>
+        <Link
           href="/travel"
           className="font-label text-xs tracking-widest uppercase text-primary-fixed/60 hover:text-white transition-opacity"
         >
