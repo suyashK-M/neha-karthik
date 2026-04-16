@@ -28,6 +28,7 @@ const Navbar = () => {
     { name: "Home", href: "/" },
     { name: "Events", href: "/events" },
     { name: "RSVP", href: "/rsvp" },
+    { name: "Venue", href: "/venue" },
     { name: "Wardrobe", href: "/wardrobe" },
     { name: "Travel", href: "/travel" },
     { name: "Bangalore Guide", href: "/guide" },
